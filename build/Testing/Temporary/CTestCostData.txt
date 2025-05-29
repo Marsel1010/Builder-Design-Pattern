@@ -1,0 +1,7 @@
+HeroTest.ConstructorAndAttributes 2 0.00416677
+HeroTest.InventoryManipulation 2 0.000862902
+HeroBuilderTest.BuildWarrior 2 0.000753239
+HeroBuilderTest.BuildWizard 2 0.000783465
+HeroBuilderTest.BuildRogue 2 0.000795761
+ItemTest.ConstructorAndGetters 2 0.00152225
+---

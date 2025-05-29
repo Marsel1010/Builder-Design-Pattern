@@ -1,0 +1,4 @@
+/home/marboss/designpattern/Builder Design Pattern/build/CMakeFiles/rebuild_cache.dir
+/home/marboss/designpattern/Builder Design Pattern/build/CMakeFiles/edit_cache.dir
+/home/marboss/designpattern/Builder Design Pattern/build/CMakeFiles/builder_main.dir
+/home/marboss/designpattern/Builder Design Pattern/build/CMakeFiles/builder_static.dir

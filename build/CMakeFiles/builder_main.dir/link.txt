@@ -1,0 +1,1 @@
+/usr/bin/c++     CMakeFiles/builder_main.dir/main.cpp.o  -o builder_main  libbuilder_static.a 

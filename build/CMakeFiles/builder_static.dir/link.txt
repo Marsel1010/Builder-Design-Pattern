@@ -1,0 +1,2 @@
+/usr/bin/ar qc libbuilder_static.a  CMakeFiles/builder_static.dir/Hero.cpp.o CMakeFiles/builder_static.dir/HeroBuilder.cpp.o CMakeFiles/builder_static.dir/Item.cpp.o
+/usr/bin/ranlib libbuilder_static.a

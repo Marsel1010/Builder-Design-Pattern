@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up CMake
+      uses: jwlawson/actions-setup-cmake@v1
+      with:
+        cmake-version: '3.10'
+
+    - name: Install dependencies
+      run: sudo apt-get install -y g++ cmake
+
+    - name: Build project
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+        cmake --build . --target all
+
+    - name: Run tests
+      run: |
+        cd build
+        ctest --output-on-failure
+
+    - name: Create .deb package
+      run: |
+        cd build
+        mkdir -p package/DEBIAN
+        echo "Package: builder-pattern" >> package/DEBIAN/control
+        echo "Version: 1.0" >> package/DEBIAN/control
+        echo "Section: base" >> package/DEBIAN/control
+        echo "Priority: optional" >> package/DEBIAN/control
+        echo "Architecture: amd64" >> package/DEBIAN/control
+        echo "Maintainer: Your Name <youremail@example.com>" >> package/DEBIAN/control
+        echo "Description: A sample builder pattern project" >> package/DEBIAN/control
+        
+        mkdir -p package/usr/local/bin
+        cp builder_main package/usr/local/bin/
+        
+        dpkg-deb --build package
+
+    - name: Upload .deb package
+      uses: actions/upload-artifact@v2
+      with:
+        name: builder-pattern-package
+        path: build/package.deb

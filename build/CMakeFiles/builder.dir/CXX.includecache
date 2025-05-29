@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/marboss/designpattern/Builder Design Pattern/Hero.cpp
+Hero.h
+/home/marboss/designpattern/Builder Design Pattern/Hero.h
+iostream
+-
+
+/home/marboss/designpattern/Builder Design Pattern/Hero.h
+Item.h
+/home/marboss/designpattern/Builder Design Pattern/Item.h
+list
+-
+string
+-
+
+/home/marboss/designpattern/Builder Design Pattern/HeroBuilder.cpp
+HeroBuilder.h
+/home/marboss/designpattern/Builder Design Pattern/HeroBuilder.h
+Item.h
+/home/marboss/designpattern/Builder Design Pattern/Item.h
+
+/home/marboss/designpattern/Builder Design Pattern/HeroBuilder.h
+Hero.h
+/home/marboss/designpattern/Builder Design Pattern/Hero.h
+
+/home/marboss/designpattern/Builder Design Pattern/Item.h
+string
+-
+iostream
+-
+
