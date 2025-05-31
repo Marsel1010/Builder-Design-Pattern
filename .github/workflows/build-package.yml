@@ -11,50 +11,84 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Полная история коммитов для корректного определения версии
 
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential debhelper
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          debhelper \
+          dh-make \
+          git
 
-    - name: Clean workspace
+    - name: Clean previous builds
       run: |
         rm -rf build
-        mkdir -p build
+        rm -rf package
+        rm -f *.deb
 
     - name: Configure project
-      working-directory: ./build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=Release
+      run: |
+        mkdir -p build
+        cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 
     - name: Build project
-      working-directory: ./build
-      run: cmake --build . --config Release --parallel $(nproc)
+      run: |
+        cmake --build build --config Release --parallel $(nproc)
 
     - name: Run tests
-      working-directory: ./build
-      run: ctest --output-on-failure --parallel $(nproc)
+      run: |
+        cd build
+        ctest --output-on-failure --parallel $(nproc)
+
+    - name: Get version from tag
+      id: get-version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/v}
+        else
+          VERSION="0.0.0-dev"
+        fi
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "Using version: ${VERSION}"
 
     - name: Prepare DEB package
       run: |
         mkdir -p package/usr/local/bin
         install -D -m 755 build/main package/usr/local/bin/builder-pattern
-        mkdir -p package/DEBIAN
         
+        mkdir -p package/DEBIAN
         cat > package/DEBIAN/control <<EOF
         Package: builder-pattern
-        Version: 1.0.0
+        Version: ${{ steps.get-version.outputs.version }}
         Section: devel
         Priority: optional
         Architecture: amd64
         Maintainer: Your Name <your.email@example.com>
-        Description: Builder Pattern Implementation
+        Description: Builder Design Pattern implementation
         EOF
 
     - name: Build DEB package
-      run: dpkg-deb --build package builder-pattern.deb
+      run: |
+        dpkg-deb --build package builder-pattern_${{ steps.get-version.outputs.version }}_amd64.deb
+        ls -lh *.deb
 
-    - uses: actions/upload-artifact@v4
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
       with:
-        name: builder-pattern
-        path: builder-pattern.deb
+        name: builder-pattern-deb
+        path: builder-pattern_${{ steps.get-version.outputs.version }}_amd64.deb
+
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: builder-pattern_${{ steps.get-version.outputs.version }}_amd64.deb
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
