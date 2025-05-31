@@ -1,87 +1,82 @@
-name: Build, Test and Package
+name: Build, Test and Deploy DEB Package
 
 on:
   push:
     tags:
-      - 'v*'  # Запуск при создании тегов v1.0, v2.0 и т.д.
-  workflow_dispatch:  # Разрешает ручной запуск
+      - 'v*'  # Запускается при тегах вида v1.0, v2.0 и т.д.
+  workflow_dispatch:  # Разрешает ручной запуск из интерфейса GitHub
 
 jobs:
-  build-and-package:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          build-essential \
-          debhelper \
-          dh-make \
-          libc6-dev
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            build-essential \
+            debhelper \
+            dh-make
 
-    - name: Configure project
-      run: |
-        mkdir -p build
-        cd build
-        cmake -DCMAKE_BUILD_TYPE=Release ..
+      - name: Configure and build
+        run: |
+          mkdir -p build
+          cd build
+          cmake ..
+          cmake --build . --config Release --parallel $(nproc)
 
-    - name: Build project
-      run: |
-        cd build
-        cmake --build . --config Release --parallel $(nproc)
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure --parallel $(nproc)
 
-    - name: Run tests
-      run: |
-        cd build
-        ctest --output-on-failure --parallel $(nproc)
+      - name: Prepare DEB package structure
+        run: |
+          mkdir -p package/usr/local/bin
+          mkdir -p package/usr/share/doc/builder-pattern
+          mkdir -p package/DEBIAN
+          
+          # Копируем бинарник (замените 'main' на ваш исполняемый файл)
+          install -D -m 755 build/main package/usr/local/bin/builder-pattern
+          
+          # Копируем README (если есть)
+          [ -f README.md ] && cp README.md package/usr/share/doc/builder-pattern/
 
-    - name: Create DEB package structure
-      run: |
-        mkdir -p package/usr/local/bin
-        mkdir -p package/usr/share/doc/builder-pattern
-        mkdir -p package/DEBIAN
-        
-        # Копируем бинарник (замените 'main' на имя вашего исполняемого файла)
-        install -D -m 755 build/main package/usr/local/bin/builder-pattern
-        
-        # Копируем документацию если есть
-        [ -f README.md ] && cp README.md package/usr/share/doc/builder-pattern/
+      - name: Create DEB control file
+        run: |
+          cat > package/DEBIAN/control <<EOF
+          Package: builder-pattern
+          Version: 1.0.0
+          Section: devel
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Your Name <your.email@example.com>
+          Description: Builder Design Pattern Example
+           This package demonstrates the Builder pattern in C++.
+          EOF
 
-    - name: Create DEB control file
-      run: |
-        cat > package/DEBIAN/control <<EOF
-        Package: builder-pattern
-        Version: 1.0.0
-        Section: devel
-        Priority: optional
-        Architecture: amd64
-        Maintainer: Your Name <your.email@example.com>
-        Description: Builder Design Pattern implementation
-         This package contains the Builder pattern demonstration executable.
-        EOF
+      - name: Build DEB package
+        run: |
+          dpkg-deb --build package builder-pattern_1.0.0_amd64.deb
+          mkdir -p artifacts
+          mv builder-pattern_1.0.0_amd64.deb artifacts/
 
-    - name: Build DEB package
-      run: |
-        dpkg-deb --build package builder-pattern_1.0.0_amd64.deb
-        mkdir -p artifacts
-        mv builder-pattern_1.0.0_amd64.deb artifacts/
+      - name: Upload DEB package as artifact
+        uses: actions/upload-artifact@v4  # Исправлено с v2 на v4
+        with:
+          name: builder-pattern-deb
+          path: artifacts/builder-pattern_1.0.0_amd64.deb
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: deb-package
-        path: artifacts/*.deb
-
-    - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v2
-      with:
-        files: artifacts/*.deb
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release (only on tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/builder-pattern_1.0.0_amd64.deb
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
