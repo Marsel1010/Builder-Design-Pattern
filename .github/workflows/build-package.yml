@@ -1,72 +1,87 @@
-name: Сборка и создание DEB-пакета
+name: Build, Test and Package
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*'  # Запуск при создании тегов v1.0, v2.0 и т.д.
+  workflow_dispatch:  # Разрешает ручной запуск
 
 jobs:
-  build-package:
+  build-and-package:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Клонирование репозитория
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Установка зависимостей
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential debhelper dh-make
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          debhelper \
+          dh-make \
+          libc6-dev
 
-    - name: Сборка проекта
+    - name: Configure project
       run: |
         mkdir -p build
         cd build
-        cmake .. || (echo "CMake config failed"; ls ..; exit 1)
-        cmake --build . --verbose || (echo "Build failed"; exit 1)
+        cmake -DCMAKE_BUILD_TYPE=Release ..
 
-    - name: Запуск тестов
+    - name: Build project
       run: |
         cd build
-        ctest --output-on-failure --verbose || (echo "Some tests failed"; exit 1)
+        cmake --build . --config Release --parallel $(nproc)
 
-    - name: Проверка собранных файлов
+    - name: Run tests
       run: |
-        echo "Содержимое папки build:"
-        ls -la build/
-        if [ ! -f build/main ]; then
-          echo "ОШИБКА: Исполняемый файл 'main' не найден!"
-          exit 1
-        fi
+        cd build
+        ctest --output-on-failure --parallel $(nproc)
 
-    - name: Подготовка DEB-пакета
+    - name: Create DEB package structure
       run: |
-        mkdir -p builder-pattern/usr/local/bin
-        mkdir -p builder-pattern/usr/share/doc/builder-pattern
-        mkdir -p builder-pattern/DEBIAN
-        cp build/main builder-pattern/usr/local/bin/builder-pattern
-        cp README.md builder-pattern/usr/share/doc/builder-pattern/
+        mkdir -p package/usr/local/bin
+        mkdir -p package/usr/share/doc/builder-pattern
+        mkdir -p package/DEBIAN
+        
+        # Копируем бинарник (замените 'main' на имя вашего исполняемого файла)
+        install -D -m 755 build/main package/usr/local/bin/builder-pattern
+        
+        # Копируем документацию если есть
+        [ -f README.md ] && cp README.md package/usr/share/doc/builder-pattern/
 
-        cat > builder-pattern/DEBIAN/control <<EOF
+    - name: Create DEB control file
+      run: |
+        cat > package/DEBIAN/control <<EOF
         Package: builder-pattern
         Version: 1.0.0
         Section: devel
         Priority: optional
         Architecture: amd64
         Maintainer: Your Name <your.email@example.com>
-        Description: Реализация паттерна Builder
-         Пример реализации паттерна Builder на C++.
+        Description: Builder Design Pattern implementation
+         This package contains the Builder pattern demonstration executable.
         EOF
 
-    - name: Сборка DEB-пакета
+    - name: Build DEB package
       run: |
-        dpkg-deb --build builder-pattern builder-pattern_1.0.0_amd64.deb
-        ls -la *.deb
+        dpkg-deb --build package builder-pattern_1.0.0_amd64.deb
+        mkdir -p artifacts
+        mv builder-pattern_1.0.0_amd64.deb artifacts/
 
-    - name: Создание Release
-      uses: softprops/action-gh-release@v1
-      if: success()
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
-        files: builder-pattern_1.0.0_amd64.deb
+        name: deb-package
+        path: artifacts/*.deb
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: artifacts/*.deb
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
