@@ -1,0 +1,60 @@
+name: Build and Release
+
+on:
+  push:
+    tags: 
+      - 'v*'  # Запускать действие только при пуше тегов, начинающихся с 'v'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up CMake
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: '3.20'
+
+      - name: Install dependencies
+        run: sudo apt-get install -y cmake g++ pkg-config
+
+      - name: Build the project
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build .
+
+      - name: Run tests
+        run: |
+          cd build
+          ctest --output-on-failure
+
+      - name: Create .deb package
+        run: |
+          cd build
+          cpack -G DEB
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}  # Использует текущий тег
+          release_name: Release ${{ github.ref }}  # Название релиза
+          body: |
+            Сборка проекта завершена. Прикреплен пакет .deb.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .deb package to release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}  # Использует текущий тег
+          files: build/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
