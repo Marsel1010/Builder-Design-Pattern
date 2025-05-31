@@ -1,0 +1,72 @@
+name: Сборка и создание DEB-пакета
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-package:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Клонирование репозитория
+      uses: actions/checkout@v4
+
+    - name: Установка зависимостей
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential debhelper dh-make
+
+    - name: Сборка проекта
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. || (echo "CMake config failed"; ls ..; exit 1)
+        cmake --build . --verbose || (echo "Build failed"; exit 1)
+
+    - name: Запуск тестов
+      run: |
+        cd build
+        ctest --output-on-failure --verbose || (echo "Some tests failed"; exit 1)
+
+    - name: Проверка собранных файлов
+      run: |
+        echo "Содержимое папки build:"
+        ls -la build/
+        if [ ! -f build/main ]; then
+          echo "ОШИБКА: Исполняемый файл 'main' не найден!"
+          exit 1
+        fi
+
+    - name: Подготовка DEB-пакета
+      run: |
+        mkdir -p builder-pattern/usr/local/bin
+        mkdir -p builder-pattern/usr/share/doc/builder-pattern
+        mkdir -p builder-pattern/DEBIAN
+        cp build/main builder-pattern/usr/local/bin/builder-pattern
+        cp README.md builder-pattern/usr/share/doc/builder-pattern/
+
+        cat > builder-pattern/DEBIAN/control <<EOF
+        Package: builder-pattern
+        Version: 1.0.0
+        Section: devel
+        Priority: optional
+        Architecture: amd64
+        Maintainer: Your Name <your.email@example.com>
+        Description: Реализация паттерна Builder
+         Пример реализации паттерна Builder на C++.
+        EOF
+
+    - name: Сборка DEB-пакета
+      run: |
+        dpkg-deb --build builder-pattern builder-pattern_1.0.0_amd64.deb
+        ls -la *.deb
+
+    - name: Создание Release
+      uses: softprops/action-gh-release@v1
+      if: success()
+      with:
+        files: builder-pattern_1.0.0_amd64.deb
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
