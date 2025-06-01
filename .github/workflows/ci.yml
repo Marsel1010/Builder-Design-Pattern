@@ -1,60 +1,96 @@
-name: Build and Release
+name: CI Build and Package
 
 on:
   push:
-    tags:
-      - 'v*'  # Запускать действие только при пуше тегов, начинающихся с 'v'
+    branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
 
+env:
+  BUILD_TYPE: Release
+
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    runs-on: ubuntu-22.04
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up CMake
-        uses: jwlawson/actions-setup-cmake@v1
-        with:
-          cmake-version: '3.20'
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          debhelper \
+          dh-make \
+          valgrind  # Для тестов памяти
 
-      - name: Install dependencies
-        run: sudo apt-get install -y cmake g++ pkg-config
+    - name: Configure project
+      run: |
+        mkdir -p build
+        cmake -B build -S . -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
 
-      - name: Build the project
-        run: |
-          mkdir build
-          cd build
-          cmake ..
-          cmake --build .
+    - name: Build project
+      run: |
+        cmake --build build --config ${{ env.BUILD_TYPE }} \
+          --parallel $(nproc) \
+          --verbose
 
-      - name: Run tests
-        run: |
-          cd build
-          ctest --output-on-failure
+    - name: Run unit tests
+      working-directory: ./build
+      run: |
+        ctest --output-on-failure \
+          --parallel $(nproc) \
+          --timeout 10
 
-      - name: Create .deb package
-        run: |
-          cd build
-          cpack -G DEB
+    - name: Memory check (valgrind)
+      working-directory: ./build
+      run: |
+        for test in $(ctest -N | awk '{print $3}'); do
+          valgrind --leak-check=full ./$test
+        done
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref }}  # Использует текущий тег
-          release_name: Release ${{ github.ref }}  # Название релиза
-          body: |
-            Сборка проекта завершена. Прикреплен пакет .deb.
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create DEB package
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      run: |
+        # Определяем версию из тега
+        VERSION=${GITHUB_REF#refs/tags/v}
+        
+        mkdir -p package/usr/local/bin
+        install -D -m 755 build/main package/usr/local/bin/builder-pattern
+        
+        mkdir -p package/DEBIAN
+        cat > package/DEBIAN/control <<EOF
+        Package: builder-pattern
+        Version: $VERSION
+        Section: devel
+        Priority: optional
+        Architecture: amd64
+        Maintainer: Your Name <your.email@example.com>
+        Description: Builder Design Pattern Implementation
+         Professional implementation of Builder pattern in C++
+        EOF
+        
+        dpkg-deb --build package builder-pattern_${VERSION}_amd64.deb
 
-      - name: Upload .deb package to release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref }}  # Использует текущий тег
-          files: build/*.deb
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          build/compile_commands.json
+          build/tests/*_test
+          builder-pattern_*.deb
+        if-no-files-found: error
+
+    - name: Create Release
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: builder-pattern_*.deb
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
