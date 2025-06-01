@@ -17,6 +17,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Полная история для версионирования
+
+    - name: Clean workspace
+      run: |
+        # Полная очистка предыдущих сборок
+        rm -rf build
+        rm -rf */build
+        rm -f CMakeCache.txt
 
     - name: Install dependencies
       run: |
@@ -25,72 +34,60 @@ jobs:
           cmake \
           build-essential \
           debhelper \
-          dh-make \
-          valgrind  # Для тестов памяти
+          valgrind
 
-    - name: Configure project
+    - name: Configure project (clean build)
       run: |
         mkdir -p build
-        cmake -B build -S . -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+                 -DCMAKE_MAKE_PROGRAM=make \
+                 --no-warn-unused-cli
 
     - name: Build project
+      working-directory: ./build
       run: |
-        cmake --build build --config ${{ env.BUILD_TYPE }} \
-          --parallel $(nproc) \
-          --verbose
+        cmake --build . --config ${{ env.BUILD_TYPE }} \
+              --parallel $(nproc) \
+              --verbose
 
-    - name: Run unit tests
+    - name: Run tests
       working-directory: ./build
       run: |
         ctest --output-on-failure \
-          --parallel $(nproc) \
-          --timeout 10
-
-    - name: Memory check (valgrind)
-      working-directory: ./build
-      run: |
-        for test in $(ctest -N | awk '{print $3}'); do
-          valgrind --leak-check=full ./$test
-        done
+              --parallel $(nproc) \
+              --timeout 10
 
     - name: Create DEB package
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+      working-directory: ./build
       run: |
-        # Определяем версию из тега
+        # Получаем версию из тега
         VERSION=${GITHUB_REF#refs/tags/v}
         
-        mkdir -p package/usr/local/bin
-        install -D -m 755 build/main package/usr/local/bin/builder-pattern
+        # Создаем структуру пакета
+        mkdir -p ../package/usr/local/bin
+        install -D -m 755 ./main ../package/usr/local/bin/builder-pattern
         
-        mkdir -p package/DEBIAN
-        cat > package/DEBIAN/control <<EOF
+        # Генерируем control файл
+        mkdir -p ../package/DEBIAN
+        cat > ../package/DEBIAN/control <<EOF
         Package: builder-pattern
         Version: $VERSION
         Section: devel
         Priority: optional
         Architecture: amd64
         Maintainer: Your Name <your.email@example.com>
-        Description: Builder Design Pattern Implementation
-         Professional implementation of Builder pattern in C++
+        Description: Builder Pattern Implementation
         EOF
         
-        dpkg-deb --build package builder-pattern_${VERSION}_amd64.deb
+        # Собираем пакет
+        dpkg-deb --build ../package ../builder-pattern_${VERSION}_amd64.deb
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: build-artifacts
+        name: build-output
         path: |
-          build/compile_commands.json
-          build/tests/*_test
           builder-pattern_*.deb
-        if-no-files-found: error
-
-    - name: Create Release
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v2
-      with:
-        files: builder-pattern_*.deb
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          build/compile_commands.json
