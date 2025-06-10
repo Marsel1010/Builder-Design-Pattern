@@ -1,29 +1,24 @@
-#ifndef HERO_H
-#define HERO_H
-
-#include "Item.h"
-#include <list>
+#pragma once
+#include <cstddef>
 #include <string>
+#include <vector>
+#include "Item.h"
 
-class Hero
-{
-public:
-    Hero(const std::string& name, int strength, int dexterity, int willpower);
-
-    void showItems() const;
-    void addItem(const Item& item);
-    size_t getInventorySize() const { return inventory.size(); }
-    std::string getName() const { return name; }
-    int getStrength() const { return strength; }
-    int getDexterity() const { return dexterity; }
-    int getWillpower() const { return willpower; }
-
+class Hero {
 private:
-    std::list<Item> inventory;
-    int strength;
-    int dexterity;
-    int willpower;
     std::string name;
+    std::string heroClass;
+    int level;
+    std::vector<Item> inventory;
+    
+public:
+    Hero(const std::string& name, const std::string& heroClass);
+    
+    void addItem(const Item& item);
+    void levelUp();
+    
+    std::string getName() const;
+    std::string getHeroClass() const;
+    int getLevel() const;
+    const std::vector<Item>& getInventory() const;
 };
-
-#endif // HERO_H

@@ -1,9 +1,9 @@
 #ifndef ITEM_H
 #define ITEM_H
-
+#include <cstddef>
 #include <string>
 #include <iostream>
-
+#include <ostream>
 class Item
 {
 public:

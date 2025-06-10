@@ -1,4 +1,0 @@
-test_Hero 1 0.00620884
-test_HeroBuilder 1 0.00388221
-test_Item 1 0.00441994
----

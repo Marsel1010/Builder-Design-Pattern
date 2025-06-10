@@ -46,6 +46,8 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/usr/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake"
   "/usr/share/cmake-4.0/Modules/CMakeTestCompilerCommon.cmake"
   "/usr/share/cmake-4.0/Modules/CMakeUnixFindMake.cmake"
+  "/usr/share/cmake-4.0/Modules/CPack.cmake"
+  "/usr/share/cmake-4.0/Modules/CPackComponent.cmake"
   "/usr/share/cmake-4.0/Modules/CheckCSourceCompiles.cmake"
   "/usr/share/cmake-4.0/Modules/CheckIncludeFile.cmake"
   "/usr/share/cmake-4.0/Modules/CheckLibraryExists.cmake"
@@ -134,6 +136,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "/usr/share/cmake-4.0/Modules/Platform/Linux-Initialize.cmake"
   "/usr/share/cmake-4.0/Modules/Platform/Linux.cmake"
   "/usr/share/cmake-4.0/Modules/Platform/UnixPaths.cmake"
+  "/usr/share/cmake-4.0/Templates/CPackConfig.cmake.in"
   )
 
 # The corresponding makefile is:
@@ -151,6 +154,8 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/4.0.2/CMakeCCompiler.cmake"
   "CMakeFiles/4.0.2/CMakeCXXCompiler.cmake"
   "CMakeFiles/4.0.2/CMakeCXXCompiler.cmake"
+  "CPackConfig.cmake"
+  "CPackSourceConfig.cmake"
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   "tests/CMakeFiles/CMakeDirectoryInformation.cmake"
   )

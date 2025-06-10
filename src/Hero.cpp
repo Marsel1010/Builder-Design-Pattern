@@ -1,16 +1,15 @@
 #include "Hero.h"
-#include <iostream>
+#include "Item.h"
 
-Hero::Hero(const std::string& name, int strength, int dexterity, int willpower)
-    : name(name), strength(strength), dexterity(dexterity), willpower(willpower) {}
+Hero::Hero(const std::string& name, const std::string& heroClass) 
+    : name(name), heroClass(heroClass), level(1) {}
 
 void Hero::addItem(const Item& item) {
     inventory.push_back(item);
 }
 
-void Hero::showItems() const {
-    std::cout << name << " Inventory: " << std::endl;
-    for (auto it = inventory.begin(); it != inventory.end(); ++it) {
-        it->printStats();
-    }
+void Hero::levelUp() {
+    level++;
 }
+
+// ... остальные методы

@@ -19,3 +19,10 @@ target_link_libraries(builder_example builder_pattern)
 # Тесты
 enable_testing()
 add_subdirectory(tests)
+# ... предыдущие настройки ...
+
+# DEB package configuration
+set(CPACK_GENERATOR "DEB")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Your Name")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+include(CPack)
