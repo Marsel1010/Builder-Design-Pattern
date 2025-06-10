@@ -1,67 +1,42 @@
-name: Build and Package
+name: Build, Test and Package
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-
-env:
-  BUILD_TYPE: Release
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
-    
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          build-essential \
-          debhelper \
-          dh-make
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential libgtest-dev
+          sudo apt-get install -y debhelper dh-make
 
-    - name: Configure project
-      run: |
-        mkdir -p build
-        cmake -B build -S . -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+      - name: Configure and Build
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DBUILD_TESTING=ON
+          make
+          ctest --output-on-failure
 
-    - name: Build project
-      run: |
-        cmake --build build --config ${{ env.BUILD_TYPE }} --parallel $(nproc)
+      - name: Build .deb package
+        run: |
+          dpkg-buildpackage -us -uc
 
-    - name: Run tests
-      working-directory: ./build
-      run: |
-        ctest --output-on-failure --parallel $(nproc)
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: deb-package
+          path: ../*.deb
 
-    - name: Create DEB package
-      run: |
-        mkdir -p package/usr/local/bin
-        install -D -m 755 build/main package/usr/local/bin/builder-pattern
-        
-        mkdir -p package/DEBIAN
-        cat > package/DEBIAN/control <<EOF
-        Package: builder-pattern
-        Version: 1.0.0
-        Section: devel
-        Priority: optional
-        Architecture: amd64
-        Maintainer: Your Name <your.email@example.com>
-        Description: Builder Pattern Implementation
-        EOF
-        
-        dpkg-deb --build package builder-pattern.deb
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: builder-pattern-package
-        path: |
-          builder-pattern.deb
-          build/compile_commands.json  # если нужен
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ../*.deb

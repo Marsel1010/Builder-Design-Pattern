@@ -1,12 +1,11 @@
-Source: hero-builder
+Source: builder-design-pattern
 Section: devel
 Priority: optional
 Maintainer: Your Name <your.email@example.com>
-Build-Depends: debhelper (>=9), cmake, g++, libgtest-dev
+Build-Depends: debhelper (>= 11), cmake, g++
 Standards-Version: 4.5.0
 
-Package: hero-builder
+Package: builder-design-pattern
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: Hero Builder Design Pattern implementation
- Example implementation of Builder design pattern for creating game heroes.
+Description: Builder Design Pattern Example
