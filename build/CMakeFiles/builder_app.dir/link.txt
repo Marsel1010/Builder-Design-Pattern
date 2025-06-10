@@ -1,1 +1,0 @@
-/usr/bin/c++     CMakeFiles/builder_app.dir/main.cpp.o  -o builder_app  libbuilder.a 

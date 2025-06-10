@@ -1,2 +1,0 @@
-/usr/bin/ar qc libbuilder.a  CMakeFiles/builder.dir/Hero.cpp.o CMakeFiles/builder.dir/HeroBuilder.cpp.o
-/usr/bin/ranlib libbuilder.a

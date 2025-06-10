@@ -1,1 +1,0 @@
-/usr/bin/c++     CMakeFiles/tests.dir/HeroTest.cpp.o CMakeFiles/tests.dir/HeroBuilderTest.cpp.o CMakeFiles/tests.dir/ItemTest.cpp.o  -o tests  libbuilder_static.a lib/libgtest_main.a lib/libgtest.a -lpthread 
